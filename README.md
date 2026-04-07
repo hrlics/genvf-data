@@ -2,6 +2,51 @@
 
 Traces and prefixes for generative verifier training data.
 
+## Pipeline: How to Generate Suffixes
+
+### Step 1: Generate Traces
+
+Generate full reasoning traces from a model on the GVF-3k dataset using OpenRouter / OpenAI-compatible APIs.
+
+```bash
+export OPENROUTER_API_KEY="your-key"
+python generate_traces.py --model qwen3-235b-thinking
+python generate_traces.py --model gpt5-mini --concurrency 8 --temperature 0.7
+```
+
+Outputs are saved to `traces/<model>.jsonl`.
+
+### Step 2: Generate Prefixes
+
+Truncate the reasoning traces into prefixes at transition keywords (e.g., "Wait", "But", "Alternatively") using `TrajectorySegmenter` from `make_prefix.py`.
+
+```bash
+python generate_prefixes.py --model qwen3-235b-thinking
+python generate_prefixes.py --model gpt5-mini --start 0 --end 100
+```
+
+Outputs are saved to `prefixes/<model>.jsonl`.
+
+### Step 3: Generate Suffixes
+
+Continue from each truncated prefix by prompting the model with the original problem and the prefix as a partial assistant response.
+
+```bash
+python generate_suffixes.py --model qwen3-235b-thinking --num-suffixes 8
+python generate_suffixes.py --model qwen3-235b-thinking --start 0 --end 100 --concurrency 8
+```
+
+### Step 4: Generate Summaries
+
+Use Gemini to summarize the suffix rollouts into structured bullet-point steps (prefix steps + suffix variants), then push the annotated dataset to HuggingFace Hub.
+
+```bash
+export GEMINI_API_KEY="your-key"
+python gemini_summary.py
+```
+
+The prompt template is in `prompts/gemini-summary-prompt/v2.md`.
+
 ## Data
 
 | File | Description |
